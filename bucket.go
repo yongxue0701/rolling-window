@@ -2,7 +2,7 @@
 // 因为这周的课程感觉有点难，还没有完全理解和消化。
 // 可能需要多看几遍才能独立完成作业。之后会抽空再复习的。
 
-package hystrix
+package rolling_window
 
 import (
 	"sync"

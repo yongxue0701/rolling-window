@@ -2,19 +2,18 @@
 // 因为这周的课程感觉有点难，还没有完全理解和消化。
 // 可能需要多看几遍才能独立完成作业。之后会抽空再复习的。
 
-package hystrix
+package rolling_window
 
 import (
-	"fmt"
 	"sync"
 	"time"
 )
 
 type RollingWindow struct {
 	mute               sync.RWMutex
+	buckets            []*Bucket
 	isBroken           bool
 	windowSize         int
-	buckets            []*Bucket
 	requestThreshold   int
 	failedThreshold    float64
 	lastBrokenTime     time.Time
@@ -57,16 +56,6 @@ func (r *RollingWindow) GetLastBucket() *Bucket {
 	return r.buckets[len(r.buckets)-1]
 }
 
-func (r *RollingWindow) SaveRequestRecord(result bool) {
-	r.GetLastBucket().Record(result)
-}
-
-func (r *RollingWindow) ShowAllBuckets() {
-	for _, v := range r.buckets {
-		fmt.Printf("timestamp: [%v] | total counts: [%d] | failed counts: [%d]\n", v.Timestamp, v.TotalCount, v.FailedCount)
-	}
-}
-
 func (r *RollingWindow) CheckIfBroken() bool {
 	r.mute.RLock()
 	defer r.mute.RUnlock()
@@ -86,15 +75,11 @@ func (r *RollingWindow) CheckIfBroken() bool {
 	return false
 }
 
-func (r *RollingWindow) IsBrokenTimeIntervalOver() bool {
-	return time.Since(r.lastBrokenTime) > r.brokenTimeInterval
-}
-
 func (r *RollingWindow) Monitor() {
 	go func() {
 		for {
 			if r.isBroken {
-				if r.IsBrokenTimeIntervalOver() {
+				if time.Since(r.lastBrokenTime) > r.brokenTimeInterval {
 					r.mute.Lock()
 					r.isBroken = false
 					r.mute.Unlock()
